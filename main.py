@@ -5,6 +5,10 @@ import PIL
 from PIL import ImageTk, Image
 import socket
 import select
+import errno
+import threading
+import time
+
 
 WIN_HEIGHT = 500
 WIN_WIDTH = 300
@@ -29,15 +33,52 @@ def open_server(event):
         message_header = f"{len(message):<{HEADER_LENGTH}}".encode('utf-8')
         client_socket.send(message_header + message)
         user_chat_info = T2.get()
-
         msg.set('')
         T.insert(tk.END, my_username + ': ')
         T.insert(tk.END, user_chat_info)
         T.insert(tk.END, '\n' )
 
-    if password:
+    def insert_incomming(incomming_message, incomming_username):
+        T.insert(tk.END, incomming_username + ': ')
+        T.insert(tk.END, incomming_message)
+        T.insert(tk.END, '\n' )
+
+    def check_incomming_msg():
+        while True:
+            try:
+                while True:
+                    username_header = client_socket.recv(HEADER_LENGTH)
+
+                    if not len(username_header):
+                        print('Connection closed by the server')
+                        sys.exit()
+
+                    username_length = int(username_header.decode('utf-8').strip())
+                    incomming_username = client_socket.recv(username_length).decode('utf-8')
+
+                    message_header = client_socket.recv(HEADER_LENGTH)
+                    message_length = int(message_header.decode('utf-8').strip())
+                    incomming_message = client_socket.recv(message_length).decode('utf-8')
+
+                    if incomming_message:
+                        insert_incomming(incomming_message,incomming_username)
+                        time.sleep(2)
+                break
+
+            except IOError as e:
+                if e.errno != errno.EAGAIN and e.errno != errno.EWOULDBLOCK:
+                    print('Reading error: {}'.format(str(e)))
+                    sys.exit()
+                continue
+
+            except Exception as e:
+                print('Reading error: '.format(str(e)))
+                sys.exit()
+            break
+
+    if password == 'pass':                              # Currently set 'pass'
         HEADER_LENGTH = 10
-        IP = "127.0.0.1"
+        IP = "10.0.0.248"
         PORT = 1234
 
         client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -46,6 +87,9 @@ def open_server(event):
         username = my_username.encode('utf-8')
         username_header = f"{len(username):<{HEADER_LENGTH}}".encode('utf-8')
         client_socket.send(username_header + username)
+
+        thread1 = threading.Thread(target=check_incomming_msg)
+        thread1.start()
 
         TOP_HEIGHT = 375
         TOP_WIDTH = 500
@@ -65,8 +109,9 @@ def open_server(event):
         send_button.bind('<Button-1>', send_message_to_server)
         send_button.place(relx=0.85, rely=0.8, relheight=0.17, relwidth=0.145)
 
+
         top.mainloop()
-        
+
     else:
         failed_label = tk.Label(canvas, text='Incorrect Password! Try agian...', font=('Helvetica', 7), bg=GRAY)
         failed_label.place(relx=0.07, rely=0.8, relheight=0.05, relwidth=0.5)
