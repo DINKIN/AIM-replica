@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
-from tkinter import *
+from tkinter import * 
+from tkinter import colorchooser
 import PIL
 from PIL import ImageTk, Image
 import socket
@@ -8,7 +9,7 @@ import select
 import errno
 import threading
 import time
-
+from playsound import playsound
 
 WIN_HEIGHT = 500
 WIN_WIDTH = 300
@@ -19,29 +20,60 @@ LIGHTBLUE = '#adc7db'
 
 root = tk.Tk()
 root.title('AOL Instant Messenger')
-root.resizable(width = False, height = False) 
+root.resizable(width = False, height = False)
+
 
 def open_server(event):
     failed_count = 0
     my_username = username_entry.get()
     password = password_entry.get()
 
+    def font_bar_action(event):   
+        nonlocal my_txt_color_fg
+        my_txt_color_fg = colorchooser.askcolor()[1]
+        T.tag_config('messagecolor', background='white', foreground=my_txt_color_fg)
 
-    def send_message_to_server(event=None):
+
+    def send_message_to_server(event):
         message = msg.get()
         message = message.encode('utf-8')
         message_header = f"{len(message):<{HEADER_LENGTH}}".encode('utf-8')
         client_socket.send(message_header + message)
         user_chat_info = T2.get()
         msg.set('')
-        T.insert(tk.END, my_username + ': ')
-        T.insert(tk.END, user_chat_info)
-        T.insert(tk.END, '\n' )
-
+        playsound('sounds/receive.mp3')
+        T.tag_config('sender', background="white", foreground="blue")
+        T.tag_config('messagecolor', background='white', foreground=my_txt_color_fg)
+        T.insert('end', my_username + ': ', 'sender') 
+        T.insert('end', user_chat_info + '\n', 'messagecolor')
+    
+    
     def insert_incomming(incomming_message, incomming_username):
-        T.insert(tk.END, incomming_username + ': ')
-        T.insert(tk.END, incomming_message)
-        T.insert(tk.END, '\n' )
+        playsound('sounds/send.mp3')
+        T.tag_config('receiver', background="white", foreground="red")
+        T.insert('end', incomming_username + ': ', 'receiver', incomming_message + '\n')  # Puts text in Top (T) then colors the username red for incomming messages \n for new line
+
+
+    def bottom_bar_action(event):
+        pass
+
+    def donothing():   # currently set to Help dropdown menu
+        pass
+
+    def about_me():
+        TOP_HEIGHT2 = 150
+        TOP_WIDTH2 = 300
+        top = Toplevel(root, height=TOP_HEIGHT2, width=TOP_WIDTH2, bg='white') 
+        top.title('About')
+        info_me = tk.Label(top, text='Project by Terrnova Technologies\nPlease report all bugs to\ninfo@terratechblog.com', font=('helvetica', 14), bg='white')
+        info_me.pack()
+
+        its_me = PhotoImage(file="pics/itsme.png")
+        me_button = tk.Button(top, image = its_me)
+        me_button.bind('<Button-1>', donothing)
+        me_button.pack()
+
+        top.mainloop()
 
     def check_incomming_msg():
         while True:
@@ -62,7 +94,7 @@ def open_server(event):
 
                     if incomming_message:
                         insert_incomming(incomming_message,incomming_username)
-                        time.sleep(2)
+                        time.sleep(4)
                 break
 
             except IOError as e:
@@ -70,16 +102,21 @@ def open_server(event):
                     print('Reading error: {}'.format(str(e)))
                     sys.exit()
                 continue
+                time.sleep(1)
 
             except Exception as e:
                 print('Reading error: '.format(str(e)))
                 sys.exit()
             break
+            time.sleep(1)
+        time.sleep(1)
 
     if password == 'pass':                              # Currently set 'pass'
         HEADER_LENGTH = 10
-        IP = "10.0.0.248"
+        IP = "10.0.0.28"
         PORT = 1234
+
+        my_txt_color_fg = ''    # This is a non local variable
 
         client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client_socket.connect((IP, PORT))
@@ -90,25 +127,56 @@ def open_server(event):
 
         thread1 = threading.Thread(target=check_incomming_msg)
         thread1.start()
+        playsound('sounds/login1.mp3')
 
         TOP_HEIGHT = 375
-        TOP_WIDTH = 500
+        TOP_WIDTH = 505
         top = Toplevel(root, height=TOP_HEIGHT, width=TOP_WIDTH, bg='#dbdace') 
         top.title('AOL System Msg. ' + my_username + ' - Message')
 
-        msg = tk.StringVar()
+        T = tk.Text(top)   # Top text box (I chose Text for recolor and scrollbar functions)
+        T.place(relx=0.05, rely=0.06, relheight=0.4, relwidth=0.9)
+        T.configure(font=('Times New Roman', 13))
+
+        scrollbar = Scrollbar(T)
+        scrollbar.pack(side=RIGHT, fill=Y)
+        T.config(yscrollcommand=scrollbar.set)
+
+        msg = tk.StringVar()   # Bottom text box (I chose entry for the bind feature to Enter Key)
         T2 = tk.Entry(top, textvariable=msg)
         T2.bind('<Return>', send_message_to_server)
         T2.place(relx=0.005, rely=0.55, relheight=0.2, relwidth=0.989)
 
-        T = tk.Text(top)
-        T.place(relx=0.05, rely=0.06, relheight=0.4, relwidth=0.9)
-        T.configure(font=('Times New Roman', 13))
-
-        send_button = tk.Button(top, text='Send')
+        send_button_photo = PhotoImage(file="pics/sendbutton.png")
+        send_button = tk.Button(top, image = send_button_photo)
         send_button.bind('<Button-1>', send_message_to_server)
-        send_button.place(relx=0.85, rely=0.8, relheight=0.17, relwidth=0.145)
+        send_button.place(relx=0.87, rely=0.8)
 
+        bottom_button_photo = PhotoImage(file="pics/bottoms.png")
+        bottom_button = tk.Button(top, image = bottom_button_photo)
+        bottom_button.bind('<Button-1>', bottom_bar_action)
+        bottom_button.place(relx=0.01, rely=0.8)
+        
+        font_bar_photo = PhotoImage(file="pics/Fontbar.png")
+        font_bar = tk.Button(top, image = font_bar_photo)
+        font_bar.bind('<Button-1>', font_bar_action)
+        font_bar.place(relx=0.02, rely=0.475)
+        
+        menubar = Menu(top)
+        filemenu = Menu(menubar, tearoff=0)
+        filemenu.add_command(label="Insert", command=donothing)
+        filemenu.add_command(label="People", command=donothing)
+        filemenu.add_command(label="Snapshot", command=donothing)
+        filemenu.add_separator()
+        filemenu.add_command(label="Exit", command=top.quit)
+        menubar.add_cascade(label="File", menu=filemenu)
+
+        helpmenu = Menu(menubar, tearoff=0)
+        helpmenu.add_command(label="Help Index", command=donothing)
+        helpmenu.add_command(label="About...", command=about_me)
+        menubar.add_cascade(label="Help", menu=helpmenu)
+
+        top.config(menu=menubar)
 
         top.mainloop()
 
@@ -117,7 +185,7 @@ def open_server(event):
         failed_label.place(relx=0.07, rely=0.8, relheight=0.05, relwidth=0.5)
         failed_count = 1
 
-image = Image.open("theguy.png")
+image = Image.open("pics/theguy.png")
 basewidth = 130
 
 canvas = tk.Canvas(root, height=WIN_HEIGHT, width=WIN_WIDTH, bg=GRAY)
@@ -153,6 +221,7 @@ username_entry.place(relx=0.095, rely=0.6, relheight=0.05, relwidth=0.7)
 password = True
 password_entry = tk.Entry(canvas, bg='white')
 password_entry.bind('<Return>', open_server)
+password_entry.config(show="*")                 # makes it do the ****** for passwords
 password_entry.place(relx=0.095, rely=0.75, relheight=0.05, relwidth=0.8)
 
 username_label = tk.Label(canvas, text='ScreenName', font=('helvetica', 12, 'bold'), bg=GRAY, fg='#2a2e7a')

@@ -3,7 +3,7 @@ import select
 
 HEADER_LENGTH = 10
 
-IP = "10.0.0.248"
+IP = "10.0.0.28"
 PORT = 1234
 
 # Create a socket
