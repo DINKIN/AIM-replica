@@ -270,53 +270,73 @@ def open_server(event):
                 return json.load(f)
         except FileNotFoundError:
             return {}
+            
+    def open_chat():
+        thread1 = threading.Thread(target=check_incomming_msg)
+        thread1.start()
 
+        TOP_HEIGHT = 375
+        TOP_WIDTH = 505
+        top = Toplevel(root, height=TOP_HEIGHT, width=TOP_WIDTH, bg='#dbdace') 
+        top.title('AOL System Msg. ' + my_username + ' - Message')
+        global T
+        T = tk.Text(top)   # Top text box (I chose Text for recolor and scrollbar functions)
+        T.place(relx=0.05, rely=0.06, relheight=0.4, relwidth=0.9)
+        T.configure(font=('Times New Roman', 13))
+
+        scrollbar = Scrollbar(T)
+        scrollbar.pack(side=RIGHT, fill=Y)
+        T.config(yscrollcommand=scrollbar.set)
+        global msg
+        msg = tk.StringVar()   # Bottom text box (I chose entry for the bind feature to Enter Key)
+        global T2
+        T2 = tk.Entry(top, textvariable=msg)
+        T2.bind('<Return>', send_message_to_server)
+        T2.place(relx=0.005, rely=0.55, relheight=0.2, relwidth=0.989)
+
+        send_button_photo = PhotoImage(file="pics/sendbutton.png")
+        send_button = tk.Button(top, image = send_button_photo)
+        send_button.bind('<Button-1>', send_message_to_server)
+        send_button.place(relx=0.87, rely=0.8)
+
+        bottom_button_photo = PhotoImage(file="pics/bottoms.png")
+        bottom_button = tk.Button(top, image = bottom_button_photo)
+        bottom_button.bind('<Button-1>', bottom_bar_action)
+        bottom_button.place(relx=0.01, rely=0.8)
+
+        font_bar_photo = PhotoImage(file="pics/Fontbar.png")
+        font_bar = tk.Button(top, image = font_bar_photo)
+        font_bar.bind('<Button-1>', font_bar_action)
+        font_bar.place(relx=0.02, rely=0.475)
+
+        menubar = Menu(top)
+        filemenu = Menu(menubar, tearoff=0)
+        filemenu.add_command(label="Insert", command=donothing)
+        filemenu.add_command(label="People", command=donothing)
+        filemenu.add_command(label="Snapshot", command=donothing)
+        filemenu.add_separator()
+        filemenu.add_command(label="Exit", command=top.quit)
+        menubar.add_cascade(label="File", menu=filemenu)
+
+        helpmenu = Menu(menubar, tearoff=0)
+        helpmenu.add_command(label="Help Index", command=donothing)
+        helpmenu.add_command(label="About...", command=about_me)
+        menubar.add_cascade(label="Help", menu=helpmenu)
+
+        top.config(menu=menubar)
+
+        top.mainloop()  
+        
     usr = readUsers()
     if my_username in usr.keys():
         if password == usr[my_username]:
-
-            def loadfriendslist():
-                topfriends = Toplevel(root, height=450, width=200, bg='#dbdace')
-                topfriends.title('My Buddies')
-                my_friends = ['Savannah', 'Justin', 'Aaron']
-
-                buddyframe = tk.Frame(topfriends, bg='white')
-                buddyframe.place(relx=.045, rely=.12, relheight=0.7, relwidth=0.9)
-
-                tree = ttk.Treeview(buddyframe)
-                ttk.Style().configure('Treeview', rowheight=30)
-
-                hierarchy = {'Buddies': {my_friends[0]:'data',my_friends[1]:'data',my_friends[2]:'data'}}
-                hierarchy2 = {'Other': {'Talk Bot':'data'}}
-
-                def add_node(k, v):
-                    for i, j in v.items():
-                        tree.insert(k, 1, i, text=i)
-                        if isinstance(j, dict):
-                            add_node(i, j)
-
-                for k, v in hierarchy.items():
-                    tree.insert("", 1, k, text=k)
-                    add_node(k, v)
-
-                for u, z in hierarchy2.items():
-                    tree.insert("", 1, u, text=u)
-                    add_node(u, z)
-
-                tree.pack()
-
-                chat_button = tk.Button(topfriends, bg='black', text='Chat',command=topfriends.destroy)
-                chat_button.place(relx=0.18, rely=.9, relheight=.07, relwidth=.25)
-
-                topfriends.mainloop()
-            loadfriendslist()
+            playsound('sounds/login1.mp3') ####################################################### SOUND
 
             HEADER_LENGTH = 10
             IP = IPCHOICE
             PORT = PORTCHOICE
 
             my_txt_color_fg = ''    # This is a non local variable
-
             client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             client_socket.connect((IP, PORT))
             client_socket.setblocking(False)
@@ -324,64 +344,36 @@ def open_server(event):
             username_header = f"{len(username):<{HEADER_LENGTH}}".encode('utf-8')
             client_socket.send(username_header + username)
 
-            thread1 = threading.Thread(target=check_incomming_msg)
-            thread1.start()
-            playsound('sounds/login1.mp3') ####################################################### SOUND
+            topfriends = Toplevel(root, height=450, width=225, bg='#dbdace')
+            topfriends.title('My Buddies')
+            my_friends = ['Savannah', 'Justin', 'Aaron']
 
-            TOP_HEIGHT = 375
-            TOP_WIDTH = 505
-            top = Toplevel(root, height=TOP_HEIGHT, width=TOP_WIDTH, bg='#dbdace') 
-            top.title('AOL System Msg. ' + my_username + ' - Message')
+            buddyframe = tk.Frame(topfriends, bg='white')
+            buddyframe.place(relx=.045, rely=.12, relheight=0.7, relwidth=0.9)
 
-            T = tk.Text(top)   # Top text box (I chose Text for recolor and scrollbar functions)
-            T.place(relx=0.05, rely=0.06, relheight=0.4, relwidth=0.9)
-            T.configure(font=('Times New Roman', 13))
+            tree = ttk.Treeview(buddyframe)
+            ttk.Style().configure('Treeview', rowheight=30)
 
-            scrollbar = Scrollbar(T)
-            scrollbar.pack(side=RIGHT, fill=Y)
-            T.config(yscrollcommand=scrollbar.set)
+            hierarchy = {'Buddies': {my_friends[0]:'data',my_friends[1]:'data',my_friends[2]:'data'}}
+            hierarchy2 = {'Other': {'Talk Bot':'data'}}
+            def add_node(k, v):
+                for i, j in v.items():
+                    tree.insert(k, 1, i, text=i)
+                    if isinstance(j, dict):
+                        add_node(i, j)
+            for k, v in hierarchy.items():
+                tree.insert("", 1, k, text=k)
+                add_node(k, v)
+            for u, z in hierarchy2.items():
+                tree.insert("", 1, u, text=u)
+                add_node(u, z)
+            tree.pack()
 
-            msg = tk.StringVar()   # Bottom text box (I chose entry for the bind feature to Enter Key)
-            T2 = tk.Entry(top, textvariable=msg)
-            T2.bind('<Return>', send_message_to_server)
-            T2.place(relx=0.005, rely=0.55, relheight=0.2, relwidth=0.989)
+            chat_button = tk.Button(topfriends, text='Chat', command=open_chat)
+            chat_button.place(relx=0.18, rely=.9, relheight=.07, relwidth=.25)
 
-            send_button_photo = PhotoImage(file="pics/sendbutton.png")
-            send_button = tk.Button(top, image = send_button_photo)
-            send_button.bind('<Button-1>', send_message_to_server)
-            send_button.place(relx=0.87, rely=0.8)
+            topfriends.mainloop() 
 
-            bottom_button_photo = PhotoImage(file="pics/bottoms.png")
-            bottom_button = tk.Button(top, image = bottom_button_photo)
-            bottom_button.bind('<Button-1>', bottom_bar_action)
-            bottom_button.place(relx=0.01, rely=0.8)
-
-            font_bar_photo = PhotoImage(file="pics/Fontbar.png")
-            font_bar = tk.Button(top, image = font_bar_photo)
-            font_bar.bind('<Button-1>', font_bar_action)
-            font_bar.place(relx=0.02, rely=0.475)
-
-            menubar = Menu(top)
-            filemenu = Menu(menubar, tearoff=0)
-            filemenu.add_command(label="Insert", command=donothing)
-            filemenu.add_command(label="People", command=donothing)
-            filemenu.add_command(label="Snapshot", command=donothing)
-            filemenu.add_separator()
-            filemenu.add_command(label="Exit", command=top.quit)
-            menubar.add_cascade(label="File", menu=filemenu)
-
-            helpmenu = Menu(menubar, tearoff=0)
-            helpmenu.add_command(label="Help Index", command=donothing)
-            helpmenu.add_command(label="About...", command=about_me)
-            menubar.add_cascade(label="Help", menu=helpmenu)
-
-            top.config(menu=menubar)
-
-            top.mainloop()
-        else:
-            failed_label = tk.Label(canvas, text='Incorrect Password! or Account Doesn\'t Exist!', font=('Helvetica', 7), bg=GRAY)
-            failed_label.place(relx=0.07, rely=0.8, relheight=0.05, relwidth=0.7)
-            failed_count = 1
     else:
         failed_label = tk.Label(canvas, text='Incorrect Password! or Account Doesn\'t Exist!', font=('Helvetica', 7), bg=GRAY)
         failed_label.place(relx=0.07, rely=0.8, relheight=0.05, relwidth=0.7)
